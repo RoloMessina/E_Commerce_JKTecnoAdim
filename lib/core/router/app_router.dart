@@ -6,6 +6,7 @@ import 'package:flutter_application_1/presentation/screens/control_stock_screen.
 import 'package:flutter_application_1/presentation/screens/admin_profile_screen.dart';
 import 'package:flutter_application_1/presentation/screens/pedido_detail_screen.dart';
 import 'package:flutter_application_1/presentation/screens/products_by_categorie.dart';
+import 'package:flutter_application_1/presentation/screens/stock_by_categorie.dart';
 import 'package:flutter_application_1/presentation/screens/update_product_screen.dart';
 
 import 'package:go_router/go_router.dart';
@@ -24,6 +25,13 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/control-stock',
       builder: (context, state) => const ControlStockScreen(),
+    ),
+    GoRoute(
+      path: '/stock-by-categorie/:categorieId',
+      builder: (context, state) {
+        final categorieId = state.pathParameters['categorieId']!;
+        return StockByCategorieScreen(categoriaId: categorieId);
+      },
     ),
     GoRoute(
       path: '/admin-profile',
