@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/presentation/providers/actions_products_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path/path.dart' as path;
@@ -8,7 +10,7 @@ import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_bottom_navbar.dart';
 import 'package:go_router/go_router.dart';
 
-class UpdateProductScreen extends StatefulWidget {
+class UpdateProductScreen extends ConsumerStatefulWidget {
   final String categoriaId;
   final String productoId;
   final Map<String, dynamic> datosProducto;
@@ -21,10 +23,10 @@ class UpdateProductScreen extends StatefulWidget {
   });
 
   @override
-  State<UpdateProductScreen> createState() => _UpdateProductScreenState();
+  ConsumerState<UpdateProductScreen> createState() => _UpdateProductScreenState();
 }
 
-class _UpdateProductScreenState extends State<UpdateProductScreen> {
+class _UpdateProductScreenState extends ConsumerState<UpdateProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _descripcionController = TextEditingController();
@@ -60,44 +62,17 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
 
   Future<String> subirImagen(File imagen) async {
     final nombreArchivo = path.basename(imagen.path);
-    final ref =
+    final storageRef =
         FirebaseStorage.instance.ref().child('productos/$nombreArchivo');
-    await ref.putFile(imagen);
-    return await ref.getDownloadURL();
-  }
-
-  Future<void> actualizarProducto() async {
-    if (!_formKey.currentState!.validate()) return;
-    try {
-      String imagenUrl = _imagenExistente ?? '';
-      if (_imagenSeleccionada != null) {
-        imagenUrl = await subirImagen(_imagenSeleccionada!);
-      }
-
-      final productoRef = FirebaseFirestore.instance
-          .collection('productos')
-          .doc(widget.productoId);
-
-      await productoRef.update({
-        'nombre': _nombreController.text.trim(),
-        'descripcion': _descripcionController.text.trim(),
-        'precio': double.parse(_precioController.text),
-        'stock': int.parse(_stockController.text),
-        'enOferta': _enOferta,
-        'imagenUrl': imagenUrl,
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Producto actualizado')),
-      );
-      context.pop();
-    } catch (e) {
-      print('Error al actualizar producto: $e');
-    }
+    await storageRef.putFile(imagen);
+    return await storageRef.getDownloadURL();
   }
 
   @override
   Widget build(BuildContext context) {
+    final updateState = ref.watch(productActionsProvider);
+    final actions = ref.read(productActionsProvider.notifier);
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: CustomAppBar(),
@@ -221,7 +196,28 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
                         fontWeight: FontWeight.bold,
                         color: Colors.white),
                   ),
-                  onPressed: actualizarProducto,
+                  onPressed: updateState.isLoading
+                      ? null
+                      : () async {
+                          await actions.actualizarProducto(
+                            productoId: widget.productoId,
+                            nombre: _nombreController.text,
+                            descripcion: _descripcionController.text,
+                            precio: double.parse(_precioController.text),
+                            stock: int.parse(_stockController.text),
+                            enOferta: _enOferta,
+                            imagenExistente: _imagenExistente,
+                            nuevaImagen: _imagenSeleccionada,
+                          );
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Producto actualizado')),
+                            );
+                            context.pop();
+                          }
+                        },
                   child: const Text('Actualizar producto'),
                 ),
               ],

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CategoriesNotifier extends StateNotifier<List<Categorie>> {
   CategoriesNotifier() : super([]) {
-    _loadCategorias(); // Carga inicial
+    _loadCategorias(); 
   }
 
   Future<void> _loadCategorias() async {
@@ -31,7 +31,6 @@ class CategoriesNotifier extends StateNotifier<List<Categorie>> {
   }
 }
 
-// PROVIDER
 final categoriaProvider = StateNotifierProvider<CategoriesNotifier, List<Categorie>>(
   (ref) => CategoriesNotifier(),
 );

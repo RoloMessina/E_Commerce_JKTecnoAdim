@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/entities/product.dart';
+import 'package:flutter_application_1/presentation/providers/actions_products_provider.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_bottom_navbar.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class ProductsByCategorieScreen extends StatelessWidget {
+class ProductsByCategorieScreen extends ConsumerWidget {
   final String categoriaId;
 
   const ProductsByCategorieScreen({super.key, required this.categoriaId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: CustomAppBar(),
@@ -59,10 +61,16 @@ class ProductsByCategorieScreen extends StatelessWidget {
                   .where('categoriaId', isEqualTo: categoriaId)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError)
-                  return const Center(child: Text('Error cargando productos'));
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text('Error cargando productos',
+                        style: TextStyle(color: Colors.white)),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 final productos = snapshot.data!.docs;
 
@@ -91,6 +99,14 @@ class ProductsByCategorieScreen extends StatelessWidget {
                     return _ProductCard(
                       producto: producto,
                       categoriaId: categoriaId,
+                      onProductoEliminado: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Producto eliminado'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -104,18 +120,22 @@ class ProductsByCategorieScreen extends StatelessWidget {
   }
 }
 
-class _ProductCard extends StatelessWidget {
+class _ProductCard extends ConsumerWidget {
   final Product producto;
   final String categoriaId;
+  final VoidCallback onProductoEliminado;
 
   const _ProductCard({
     super.key,
     required this.producto,
     required this.categoriaId,
+    required this.onProductoEliminado,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actions = ref.read(productActionsProvider.notifier);
+
     return Card(
       color: Colors.grey[900],
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -182,10 +202,8 @@ class _ProductCard extends StatelessWidget {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text(
-                          'Cancelar',
-                          style: TextStyle(color: Colors.teal),
-                        ),
+                        child: const Text('Cancelar',
+                            style: TextStyle(color: Colors.teal)),
                       ),
                       FilledButton(
                         onPressed: () => Navigator.of(context).pop(true),
@@ -193,19 +211,15 @@ class _ProductCard extends StatelessWidget {
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text(
-                          'Eliminar',
-                        ),
+                        child: const Text('Eliminar'),
                       ),
                     ],
                   ),
                 );
 
                 if (confirmacion == true) {
-                  await FirebaseFirestore.instance
-                      .collection('productos')
-                      .doc(producto.id)
-                      .delete();
+                  await actions.eliminarProducto(producto.id);
+                  onProductoEliminado(); // mostrar snackbar desde el widget padre
                 }
               },
             ),
