@@ -60,14 +60,6 @@ class _UpdateProductScreenState extends ConsumerState<UpdateProductScreen> {
     }
   }
 
-  Future<String> subirImagen(File imagen) async {
-    final nombreArchivo = path.basename(imagen.path);
-    final storageRef =
-        FirebaseStorage.instance.ref().child('productos/$nombreArchivo');
-    await storageRef.putFile(imagen);
-    return await storageRef.getDownloadURL();
-  }
-
   @override
   Widget build(BuildContext context) {
     final updateState = ref.watch(productActionsProvider);

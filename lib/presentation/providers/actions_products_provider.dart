@@ -60,6 +60,14 @@ class ProductActionsNotifier extends StateNotifier<AsyncValue<void>> {
       rethrow;
     }
   }
+
+  Future<String> subirImagen(File imagen) async {
+    final nombreArchivo = path.basename(imagen.path);
+    final storageRef =
+        FirebaseStorage.instance.ref().child('productos/$nombreArchivo');
+    await storageRef.putFile(imagen);
+    return await storageRef.getDownloadURL();
+  }
 }
 
 final productActionsProvider =
