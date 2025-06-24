@@ -1,34 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/presentation/screens/control_pedidos_screen.dart';
-
+import 'package:flutter_application_1/presentation/providers/orders_provider.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_bottom_navbar.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_application_1/entities/order.dart' as model;
 
-/// Pantalla de detalle del pedido, donde se muestran los datos y se puede cambiar el estado.
-class PedidoDetailScreen extends StatefulWidget {
-  final Pedido pedido;
+class PedidoDetailScreen extends ConsumerStatefulWidget {
+  final model.Order order;
 
-  const PedidoDetailScreen({super.key, required this.pedido});
+  const PedidoDetailScreen({super.key, required this.order});
 
   @override
-  State<PedidoDetailScreen> createState() => _PedidoDetailScreenState();
+  ConsumerState<PedidoDetailScreen> createState() => _PedidoDetailScreenState();
 }
 
-class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
-  // Lista de posibles estados.
+class _PedidoDetailScreenState extends ConsumerState<PedidoDetailScreen> {
   final List<String> estados = ['Para preparar', 'Enviado', 'Finalizado'];
   late String selectedEstado;
 
   @override
   void initState() {
     super.initState();
-    // Inicializamos con el estado actual del pedido.
-    selectedEstado = widget.pedido.estado;
+    selectedEstado = widget.order.estado;
   }
 
-  // Traduce el estado a inglés para guardar en Firestore
   String estadoFirestore(String estado) {
     switch (estado) {
       case 'Para preparar':
@@ -42,25 +38,26 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
     }
   }
 
-  // Función para actualizar el estado del pedido en Firestore
-  Future<void> _updatePedidoStatus() async {
+  Future<void> _updateOrderStatus(WidgetRef ref) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(widget.pedido.id)
-          .update({'status': estadoFirestore(selectedEstado)});
+      final orders = ref.read(ordersProvider);
+      await orders.actualizarEstadoPedido(
+        pedidoId: widget.order.id,
+        nuevoEstado: estadoFirestore(selectedEstado),
+      );
+
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Estado del pedido actualizado correctamente!')),
+          content: Text('Estado del pedido actualizado correctamente!'),
+        ),
       );
-      // Regresar a la pantalla anterior después de actualizar
       context.pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al actualizar el estado: $e')),
       );
-      print("Error updating pedido status: $e");
     }
   }
 
@@ -69,14 +66,13 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('Detalle del Pedido ${widget.pedido.numeroDisplay}'),
+        title: Text('Detalle del Pedido ${widget.order.numeroDisplay}'),
         backgroundColor: Colors.grey[900],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            /// Tarjeta con los datos del pedido.
             Card(
               color: Colors.grey[800],
               shape: RoundedRectangleBorder(
@@ -89,7 +85,7 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pedido ${widget.pedido.numeroDisplay}',
+                      'Pedido ${widget.order.numeroDisplay}',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -98,17 +94,17 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Dirección: ${widget.pedido.direccion}',
+                      'Dirección: ${widget.order.direccion}',
                       style: const TextStyle(fontSize: 16, color: Colors.white),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Total: \$${widget.pedido.total.toStringAsFixed(2)}',
+                      'Total: \$${widget.order.total.toStringAsFixed(2)}',
                       style: const TextStyle(fontSize: 16, color: Colors.white),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Estado actual: ${widget.pedido.estado}',
+                      'Estado actual: ${widget.order.estado}',
                       style: const TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ],
@@ -117,10 +113,8 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
             ),
             const SizedBox(height: 30),
 
-            /// Caja para cambiar entre los estados del pedido.
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               decoration: BoxDecoration(
                 color: Colors.grey[800],
                 borderRadius: BorderRadius.circular(10),
@@ -131,39 +125,26 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
                   const Center(
                     child: Text(
                       'Cambiar estado:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // El DropdownButton se encarga de mostrar las opciones al hacer click.
                   DropdownButton<String>(
                     dropdownColor: Colors.grey[800],
                     value: selectedEstado,
-                    icon:
-                        const Icon(Icons.arrow_drop_down, color: Colors.white),
+                    icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
                     underline: const SizedBox(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
                     onChanged: (newValue) {
                       setState(() {
                         selectedEstado = newValue!;
-                        // Aquí podrías agregar lógica para actualizar el estado en tu backend o en tu state management.
                       });
                     },
-                    items:
-                        estados.map<DropdownMenuItem<String>>((String value) {
+                    items: estados.map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Center(
-                          child: Text(
-                            value,
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                          child: Text(value, style: const TextStyle(color: Colors.white)),
                         ),
                       );
                     }).toList(),
@@ -172,24 +153,18 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            // Botón para finalizar/facturar el pedido
             ElevatedButton.icon(
               onPressed: () {
-                // Asegurarse de que el estado sea 'Finalizado' antes de actualizar
-                setState(() {
-                  selectedEstado = 'Finalizado';
-                });
-                _updatePedidoStatus();
+                _updateOrderStatus(ref);
               },
               icon: const Icon(Icons.check_circle_outline, color: Colors.white),
               label: const Text(
-                'Finalizar Pedido',
+                'Establecer estado del pedido',
                 style: TextStyle(fontSize: 18, color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal, // Color llamativo
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                backgroundColor: Colors.teal,
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -198,7 +173,7 @@ class _PedidoDetailScreenState extends State<PedidoDetailScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNav(),
+      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 }

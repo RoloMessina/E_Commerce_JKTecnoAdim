@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/entities/categorie.dart';
 import 'package:flutter_application_1/entities/product.dart';
 import 'package:flutter_application_1/presentation/providers/actions_products_provider.dart';
+import 'package:flutter_application_1/presentation/providers/categories_provider.dart';
+import 'package:flutter_application_1/presentation/providers/products_provider.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_bottom_navbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,66 +16,38 @@ class ProductsByCategorieScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final productosAsync = ref.watch(productByCategoryProvider(categoriaId));
+    final categorias = ref.watch(categoriaProvider);
+
+    final nombreCategoria = categorias.firstWhere(
+      (cat) => cat.id == categoriaId,
+      orElse: () => Categorie(id: 'none', nombre: 'Categoría'),
+    ).nombre;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: CustomAppBar(),
       body: Column(
         children: [
           const SizedBox(height: 20),
-          FutureBuilder<DocumentSnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('categorias')
-                .doc(categoriaId)
-                .get(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
-              }
-
-              final data = snapshot.data?.data() as Map<String, dynamic>?;
-              final nombreCategoria = data?['nombre'] ?? 'Categoría';
-
-              return Column(
-                children: [
-                  const Text(
-                    "Productos",
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'OpenSans',
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    nombreCategoria,
-                    style: const TextStyle(fontSize: 20, color: Colors.white70),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              );
-            },
+          const Text(
+            "Productos",
+            style: TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'OpenSans',
+              color: Colors.white,
+            ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            nombreCategoria,
+            style: const TextStyle(fontSize: 20, color: Colors.white70),
+          ),
+          const SizedBox(height: 20),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('productos')
-                  .where('categoriaId', isEqualTo: categoriaId)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Error cargando productos',
-                        style: TextStyle(color: Colors.white)),
-                  );
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final productos = snapshot.data!.docs;
-
+            child: productosAsync.when(
+              data: (productos) {
                 if (productos.isEmpty) {
                   return const Center(
                     child: Text(
@@ -91,15 +65,12 @@ class ProductsByCategorieScreen extends ConsumerWidget {
                 return ListView.builder(
                   itemCount: productos.length,
                   itemBuilder: (context, index) {
-                    final doc = productos[index];
-                    final producto = Product.fromMap(
-                      doc.id,
-                      doc.data() as Map<String, dynamic>,
-                    );
+                    final producto = productos[index];
                     return _ProductCard(
                       producto: producto,
                       categoriaId: categoriaId,
                       onProductoEliminado: () {
+                        ref.invalidate(productByCategoryProvider(categoriaId));
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Producto eliminado'),
@@ -111,11 +82,16 @@ class ProductsByCategorieScreen extends ConsumerWidget {
                   },
                 );
               },
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Text('Error: $e', style: const TextStyle(color: Colors.red)),
+              ),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: CustomBottomNav(),
+      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 }
@@ -202,8 +178,10 @@ class _ProductCard extends ConsumerWidget {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Cancelar',
-                            style: TextStyle(color: Colors.teal)),
+                        child: const Text(
+                          'Cancelar',
+                          style: TextStyle(color: Colors.teal),
+                        ),
                       ),
                       FilledButton(
                         onPressed: () => Navigator.of(context).pop(true),
@@ -219,7 +197,7 @@ class _ProductCard extends ConsumerWidget {
 
                 if (confirmacion == true) {
                   await actions.eliminarProducto(producto.id);
-                  onProductoEliminado(); // mostrar snackbar desde el widget padre
+                  onProductoEliminado();
                 }
               },
             ),

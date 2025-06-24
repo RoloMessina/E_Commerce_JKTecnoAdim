@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/entities/categorie.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_bottom_navbar.dart';
-import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -72,10 +71,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
         _formKey.currentState!.save();
 
-        // Subir imagen y obtener URL
         final imagenUrl = await subirImagen(_imagenSeleccionada!);
 
-        // Guardar producto en Firestore
         await FirebaseFirestore.instance.collection('productos').add({
           'nombre': _nombreController.text.trim(),
           'descripcion': _descripcionController.text.trim(),
@@ -83,13 +80,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
           'stock': int.parse(_stockController.text),
           'enOferta': _enOferta,
           'categoriaId': _categoriaSeleccionada,
-          'imagenUrl': imagenUrl, // ✅ Aquí se guarda el link en Firestore
+          'imagenUrl': imagenUrl, 
         });
 
         print('Producto guardado exitosamente');
 
-        // Limpiar formularios
-        _formKey.currentState!.reset();
+         _formKey.currentState!.reset();
         _nombreController.clear();
         _descripcionController.clear();
         _precioController.clear();
@@ -276,10 +272,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ),
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
-                                return 'Requerido';
-                              if (int.tryParse(value) == null)
-                                return 'Número inválido';
+                              if (value == null || value.isEmpty){
+                                return 'Requerido';}
+                              if (int.tryParse(value) == null){
+                                return 'Número inválido';}
                               return null;
                             },
                           ),

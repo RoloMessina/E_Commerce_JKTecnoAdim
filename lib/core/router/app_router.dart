@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/entities/order.dart';
 import 'package:flutter_application_1/presentation/screens/add_product_screen.dart';
 import 'package:flutter_application_1/presentation/screens/categories_screen.dart';
 import 'package:flutter_application_1/presentation/screens/control_pedidos_screen.dart';
@@ -44,8 +45,8 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/pedido-detail',
       builder: (context, state) {
-        final pedido = state.extra as Pedido;
-        return PedidoDetailScreen(pedido: pedido);
+        final pedido = state.extra as Order;
+        return PedidoDetailScreen(order: pedido);
       },
     ),
     GoRoute(

@@ -5,7 +5,7 @@ class Product {
   final double precio;
   final int stock;
   final bool enOferta;
-  final String imagenUrl; // ✅ nuevo campo
+  final String imagenUrl;
 
   Product({
     required this.id,
@@ -25,7 +25,7 @@ class Product {
       precio: (data['precio'] ?? 0).toDouble(),
       stock: data['stock'] ?? 0,
       enOferta: data['enOferta'] ?? false,
-      imagenUrl: data['imagenUrl'] ?? '', // ✅ lectura segura
+      imagenUrl: data['imagenUrl'] ?? '',
     );
   }
 
@@ -36,7 +36,27 @@ class Product {
       'precio': precio,
       'stock': stock,
       'enOferta': enOferta,
-      'imagenUrl': imagenUrl, // ✅ lo guardás en Firestore
+      'imagenUrl': imagenUrl,
     };
+  }
+
+  Product copyWith({
+    String? id,
+    String? nombre,
+    String? descripcion,
+    double? precio,
+    int? stock,
+    bool? enOferta,
+    String? imagenUrl,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      descripcion: descripcion ?? this.descripcion,
+      precio: precio ?? this.precio,
+      stock: stock ?? this.stock,
+      enOferta: enOferta ?? this.enOferta,
+      imagenUrl: imagenUrl ?? this.imagenUrl,
+    );
   }
 }

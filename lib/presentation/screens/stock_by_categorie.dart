@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_1/entities/product.dart';
 import 'package:flutter_application_1/presentation/providers/products_provider.dart';
+import 'package:flutter_application_1/presentation/providers/categories_provider.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_bottom_navbar.dart';
 
@@ -14,84 +14,84 @@ class StockByCategorieScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final productsAsync = ref.watch(productByCategoryProvider(categoriaId));
+    final categorias = ref.watch(categoriaProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: CustomAppBar(),
-      body: Column(
-        children: [
-          const SizedBox(height: 20),
-          FutureBuilder<DocumentSnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('categorias')
-                .doc(categoriaId)
-                .get(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
-              }
-              final data = snapshot.data?.data() as Map<String, dynamic>?;
-              final nombreCategoria = data?['nombre'] ?? 'Categoría';
-              return Column(
-                children: [
-                  const Text(
-                    "Control de Stock",
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'OpenSans',
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    nombreCategoria,
-                    style: const TextStyle(fontSize: 20, color: Colors.white70),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              );
-            },
-          ),
-          Expanded(
-            child: productsAsync.when(
-              data: (products) {
-                if (products.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No hay productos en esta categoría',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'OpenSans',
-                        color: Colors.white,
+      body: categorias.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                const SizedBox(height: 20),
+                _Header(nombreCategoria: ref.read(categoriaProvider.notifier).getNombrePorId(categoriaId)),
+                Expanded(
+                  child: productsAsync.when(
+                    data: (products) {
+                      if (products.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No hay productos en esta categoría',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'OpenSans',
+                              color: Colors.white,
+                            ),
+                          ),
+                        );
+                      }
+                      return ListView.builder(
+                        itemCount: products.length,
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return _ProductCard(
+                            product: product,
+                            categoriaId: categoriaId,
+                          );
+                        },
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (error, stack) => Center(
+                      child: Text(
+                        'Error: $error',
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
-                  );
-                }
-                return ListView.builder(
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return _ProductCard(
-                      product: product,
-                      categoriaId: categoriaId,
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text(
-                  'Error: $error',
-                  style: const TextStyle(color: Colors.white),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
       bottomNavigationBar: CustomBottomNav(),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  final String nombreCategoria;
+  const _Header({required this.nombreCategoria});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Text(
+          "Control de Stock",
+          style: TextStyle(
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'OpenSans',
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          nombreCategoria,
+          style: const TextStyle(fontSize: 20, color: Colors.white70),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 }
@@ -110,10 +110,10 @@ class _ProductCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       color: Colors.grey[900],
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),  
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),  
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -160,9 +160,7 @@ class _ProductCard extends ConsumerWidget {
                     constraints: const BoxConstraints(),
                     icon: const Icon(Icons.remove, color: Colors.redAccent),
                     onPressed: () {
-                      ref
-                          .read(productByCategoryProvider(categoriaId).notifier)
-                          .decreaseStock(product.id);
+                      ref.read(productByCategoryProvider(categoriaId).notifier).decreaseStock(product.id);
                     },
                   ),
                   Container(
@@ -175,9 +173,10 @@ class _ProductCard extends ConsumerWidget {
                     child: Text(
                       '${product.stock}',
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -186,9 +185,7 @@ class _ProductCard extends ConsumerWidget {
                     constraints: const BoxConstraints(),
                     icon: const Icon(Icons.add, color: Colors.greenAccent),
                     onPressed: () {
-                      ref
-                          .read(productByCategoryProvider(categoriaId).notifier)
-                          .increaseStock(product.id);
+                      ref.read(productByCategoryProvider(categoriaId).notifier).increaseStock(product.id);
                     },
                   ),
                 ],
