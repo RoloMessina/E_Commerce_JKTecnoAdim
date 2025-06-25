@@ -1,3 +1,4 @@
+import 'package:flutter_application_1/entities/categorie.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -6,6 +7,49 @@ import 'package:path/path.dart' as path;
 
 class ProductActionsNotifier extends StateNotifier<AsyncValue<void>> {
   ProductActionsNotifier() : super(const AsyncData(null));
+
+  Future<void> agregarProducto({
+    required String nombre,
+    required String descripcion,
+    required double precio,
+    required int stock,
+    required bool enOferta,
+    required String categoriaId,
+    required File imagen,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      final imagenUrl = await subirImagen(imagen);
+
+      await FirebaseFirestore.instance.collection('productos').add({
+        'nombre': nombre.trim(),
+        'descripcion': descripcion.trim(),
+        'precio': precio,
+        'stock': stock,
+        'enOferta': enOferta,
+        'categoriaId': categoriaId,
+        'imagenUrl': imagenUrl,
+      });
+
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
+
+  Future<List<Categorie>> fetchCategorias() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('categorias').get();
+      return snapshot.docs
+          .map((doc) => Categorie(id: doc.id, nombre: doc.get('nombre') ?? ''))
+          .toList();
+    } catch (e) {
+      print('Error al obtener categorías: $e');
+      return [];
+    }
+  }
+
 
   Future<void> actualizarProducto({
     required String productoId,
@@ -68,7 +112,11 @@ class ProductActionsNotifier extends StateNotifier<AsyncValue<void>> {
     await storageRef.putFile(imagen);
     return await storageRef.getDownloadURL();
   }
+
 }
+
+
+
 
 final productActionsProvider =
     StateNotifierProvider<ProductActionsNotifier, AsyncValue<void>>(

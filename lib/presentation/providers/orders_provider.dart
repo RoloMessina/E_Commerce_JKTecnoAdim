@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/entities/order.dart' as model;
 
-// Acciones como actualizar estado
 final ordersProvider = Provider((ref) => OrdersActions());
 
 class OrdersActions {

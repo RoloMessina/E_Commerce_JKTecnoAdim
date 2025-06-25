@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/presentation/providers/actions_products_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_1/entities/categorie.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_bottom_navbar.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:path/path.dart' as path;
 
-class AddProductScreen extends StatefulWidget {
+class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
 
   @override
-  State<AddProductScreen> createState() => _AddProductScreenState();
+  ConsumerState<AddProductScreen> createState() => _AddProductScreenState();
 }
 
-class _AddProductScreenState extends State<AddProductScreen> {
+class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nombreController = TextEditingController();
@@ -36,56 +35,52 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
-  Future<String> subirImagen(File imagen) async {
-    final nombreArchivo = path.basename(imagen.path);
-
-    final ref = FirebaseStorage.instance
-        .ref()
-        .child('productos') 
-        .child(nombreArchivo);
-
-    await ref.putFile(imagen);
-
-    return await ref.getDownloadURL();
-  }
-
-  Future<List<Categorie>> _fetchCategorias() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('categorias').get();
-
-    return snapshot.docs
-        .map((doc) => Categorie(id: doc.id, nombre: doc.get('nombre') ?? ''))
-        .toList();
-  }
-
   Future<void> guardarProducto() async {
-    try {
-      if (_formKey.currentState!.validate()) {
-        if (_categoriaSeleccionada.isEmpty) {
-          throw Exception('Debe seleccionar una categoría');
-        }
+    if (_formKey.currentState!.validate()) {
+      if (_categoriaSeleccionada.isEmpty) {
+        throw Exception('Debe seleccionar una categoría');
+      }
 
-        if (_imagenSeleccionada == null) {
-          throw Exception('Debe seleccionar una imagen');
-        }
+      if (_imagenSeleccionada == null) {
+        throw Exception('Debe seleccionar una imagen');
+      }
 
-        _formKey.currentState!.save();
+      _formKey.currentState!.save();
 
-        final imagenUrl = await subirImagen(_imagenSeleccionada!);
+      await ref.read(productActionsProvider.notifier).agregarProducto(
+        nombre: _nombreController.text.trim(),
+        descripcion: _descripcionController.text.trim(),
+        precio: double.parse(_precioController.text),
+        stock: int.parse(_stockController.text),
+        enOferta: _enOferta,
+        categoriaId: _categoriaSeleccionada,
+        imagen: _imagenSeleccionada!,
+      );
 
-        await FirebaseFirestore.instance.collection('productos').add({
-          'nombre': _nombreController.text.trim(),
-          'descripcion': _descripcionController.text.trim(),
-          'precio': double.parse(_precioController.text),
-          'stock': int.parse(_stockController.text),
-          'enOferta': _enOferta,
-          'categoriaId': _categoriaSeleccionada,
-          'imagenUrl': imagenUrl, 
-        });
+      final state = ref.read(productActionsProvider);
 
-        print('Producto guardado exitosamente');
+      if (state is AsyncLoading) {
+        print('Cargando...');
+      } else if (state is AsyncError) {
+        print('Error al agregar producto: ${state.error}');
 
-         _formKey.currentState!.reset();
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hubo un problema al agregar el producto.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (state is AsyncData) {
+        print('Producto agregado exitosamente');
+        
+          ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Producto agregado correctamente.'),
+            backgroundColor: Colors.green, 
+          ),
+        );
+
+        _formKey.currentState!.reset();
         _nombreController.clear();
         _descripcionController.clear();
         _precioController.clear();
@@ -96,8 +91,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
           _imagenSeleccionada = null;
         });
       }
-    } catch (e) {
-      print('Error al guardar producto: $e');
     }
   }
 
@@ -122,7 +115,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             Expanded(
               child: SingleChildScrollView(
                 child: FutureBuilder<List<Categorie>>(
-                  future: _fetchCategorias(),
+                  future: ref.read(productActionsProvider.notifier).fetchCategorias(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -178,10 +171,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                             ),
                             validator:
-                                (value) =>
-                                    value == null || value.isEmpty
-                                        ? 'Requerido'
-                                        : null,
+                                (value) => value == null || value.isEmpty
+                                    ? 'Requerido'
+                                    : null,
                           ),
                           const SizedBox(height: 16),
 
@@ -208,10 +200,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                             ),
                             validator:
-                                (value) =>
-                                    value == null || value.isEmpty
-                                        ? 'Requerido'
-                                        : null,
+                                (value) => value == null || value.isEmpty
+                                    ? 'Requerido'
+                                    : null,
                           ),
                           const SizedBox(height: 16),
 
@@ -239,10 +230,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ),
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
-                                return 'Requerido';
-                              if (double.tryParse(value) == null)
-                                return 'Número inválido';
+                              if (value == null || value.isEmpty){
+                                return 'Requerido';}
+                              if (double.tryParse(value) == null){
+                                return 'Número inválido';}
                               return null;
                             },
                           ),
@@ -369,15 +360,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               const SizedBox(height: 10),
                               _imagenSeleccionada != null
                                   ? Image.file(
-                                    _imagenSeleccionada!,
-                                    height: 150,
-                                    width: 150,
-                                    fit: BoxFit.cover,
-                                  )
+                                      _imagenSeleccionada!,
+                                      height: 150,
+                                      width: 150,
+                                      fit: BoxFit.cover,
+                                    )
                                   : const Text(
-                                    'No hay imagen seleccionada',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
+                                      'No hay imagen seleccionada',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                               const SizedBox(height: 10),
                               ElevatedButton(
                                 onPressed: seleccionarImagen,
