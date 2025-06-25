@@ -6,6 +6,7 @@ class Product {
   final int stock;
   final bool enOferta;
   final String imagenUrl;
+  final String categoriaId; 
 
   Product({
     required this.id,
@@ -15,6 +16,7 @@ class Product {
     required this.stock,
     required this.enOferta,
     required this.imagenUrl,
+    required this.categoriaId, 
   });
 
   factory Product.fromMap(String id, Map<String, dynamic> data) {
@@ -26,6 +28,7 @@ class Product {
       stock: data['stock'] ?? 0,
       enOferta: data['enOferta'] ?? false,
       imagenUrl: data['imagenUrl'] ?? '',
+      categoriaId: data['categoriaId'] ?? '', 
     );
   }
 
@@ -37,6 +40,7 @@ class Product {
       'stock': stock,
       'enOferta': enOferta,
       'imagenUrl': imagenUrl,
+      'categoriaId': categoriaId, 
     };
   }
 
@@ -48,6 +52,7 @@ class Product {
     int? stock,
     bool? enOferta,
     String? imagenUrl,
+    String? categoriaId,
   }) {
     return Product(
       id: id ?? this.id,
@@ -57,6 +62,7 @@ class Product {
       stock: stock ?? this.stock,
       enOferta: enOferta ?? this.enOferta,
       imagenUrl: imagenUrl ?? this.imagenUrl,
+      categoriaId: categoriaId ?? this.categoriaId,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/presentation/providers/actions_products_provider.dart';
+import 'package:flutter_application_1/presentation/providers/products_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_1/entities/categorie.dart';
 import 'package:flutter_application_1/presentation/widgets/custom_app_bar.dart';
@@ -63,8 +64,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         print('Cargando...');
       } else if (state is AsyncError) {
         print('Error al agregar producto: ${state.error}');
-
-         ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Hubo un problema al agregar el producto.'),
             backgroundColor: Colors.red,
@@ -72,13 +72,15 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         );
       } else if (state is AsyncData) {
         print('Producto agregado exitosamente');
-        
-          ScaffoldMessenger.of(context).showSnackBar(
+
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Producto agregado correctamente.'),
-            backgroundColor: Colors.green, 
+            backgroundColor: Colors.green,
           ),
         );
+
+        ref.invalidate(productByCategoryProvider(_categoriaSeleccionada));
 
         _formKey.currentState!.reset();
         _nombreController.clear();
@@ -102,6 +104,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     _stockController.dispose();
     super.dispose();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -148,125 +151,39 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                           ),
                           const SizedBox(height: 50),
 
-                          TextFormField(
+                          _customTextFormField(
                             controller: _nombreController,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Nombre',
-                              labelStyle: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                              filled: true,
-                              fillColor: const Color.fromARGB(255, 75, 74, 74),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 30,
-                                horizontal: 20,
-                              ),
-                            ),
-                            validator:
-                                (value) => value == null || value.isEmpty
-                                    ? 'Requerido'
-                                    : null,
+                            labelText: 'Nombre',
+                            validator: (value) => value == null || value.isEmpty ? 'Requerido' : null,
                           ),
                           const SizedBox(height: 16),
 
-                          TextFormField(
+                          _customTextFormField(
                             controller: _descripcionController,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Descripción',
-                              labelStyle: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                              filled: true,
-                              fillColor: const Color.fromARGB(255, 75, 74, 74),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 30,
-                                horizontal: 20,
-                              ),
-                            ),
-                            validator:
-                                (value) => value == null || value.isEmpty
-                                    ? 'Requerido'
-                                    : null,
+                            labelText: 'Descripción',
+                            validator: (value) => value == null || value.isEmpty ? 'Requerido' : null,
                           ),
                           const SizedBox(height: 16),
 
-                          TextFormField(
+                          _customTextFormField(
                             controller: _precioController,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Precio',
-                              labelStyle: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                              filled: true,
-                              fillColor: const Color.fromARGB(255, 75, 74, 74),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 30,
-                                horizontal: 20,
-                              ),
-                            ),
+                            labelText: 'Precio',
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty){
-                                return 'Requerido';}
-                              if (double.tryParse(value) == null){
-                                return 'Número inválido';}
+                              if (value == null || value.isEmpty) return 'Requerido';
+                              if (double.tryParse(value) == null) return 'Número inválido';
                               return null;
                             },
                           ),
                           const SizedBox(height: 16),
 
-                          TextFormField(
+                          _customTextFormField(
                             controller: _stockController,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Stock inicial',
-                              labelStyle: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                              filled: true,
-                              fillColor: const Color.fromARGB(255, 75, 74, 74),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 30,
-                                horizontal: 20,
-                              ),
-                            ),
+                            labelText: 'Stock inicial',
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty){
-                                return 'Requerido';}
-                              if (int.tryParse(value) == null){
-                                return 'Número inválido';}
+                              if (value == null || value.isEmpty) return 'Requerido';
+                              if (int.tryParse(value) == null) return 'Número inválido';
                               return null;
                             },
                           ),
@@ -274,60 +191,28 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
                           Theme(
                             data: Theme.of(context).copyWith(
-                              canvasColor: const Color.fromARGB(
-                                255,
-                                75,
-                                74,
-                                74,
-                              ),
+                              canvasColor: const Color.fromARGB(255, 75, 74, 74),
                             ),
                             child: DropdownButtonFormField<String>(
                               decoration: InputDecoration(
                                 labelText: 'Categoría',
-                                labelStyle: const TextStyle(
-                                  fontSize: 20,
-                                  color: Colors.white,
-                                ),
+                                labelStyle: const TextStyle(fontSize: 20, color: Colors.white),
                                 filled: true,
-                                fillColor: const Color.fromARGB(
-                                  255,
-                                  75,
-                                  74,
-                                  74,
-                                ),
+                                fillColor: const Color.fromARGB(255, 75, 74, 74),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(30),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 30,
-                                  horizontal: 20,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                              ),
+                              dropdownColor: const Color.fromARGB(255, 75, 74, 74),
+                              items: categorias.map((cat) => DropdownMenuItem<String>(
+                                value: cat.id,
+                                child: Text(
+                                  cat.nombre,
+                                  style: const TextStyle(color: Colors.white, fontSize: 18),
                                 ),
-                              ),
-                              dropdownColor: const Color.fromARGB(
-                                255,
-                                75,
-                                74,
-                                74,
-                              ),
-                              items:
-                                  categorias
-                                      .map(
-                                        (cat) => DropdownMenuItem<String>(
-                                          value: cat.id,
-                                          child: Text(
-                                            cat.nombre,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                              value:
-                                  _categoriaSeleccionada.isNotEmpty
-                                      ? _categoriaSeleccionada
-                                      : null,
+                              )).toList(),
+                              value: _categoriaSeleccionada.isNotEmpty ? _categoriaSeleccionada : null,
                               onChanged: (val) {
                                 if (val != null) {
                                   setState(() {
@@ -335,11 +220,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                                   });
                                 }
                               },
-                              validator:
-                                  (value) =>
-                                      value == null || value.isEmpty
-                                          ? 'Selecciona una categoría'
-                                          : null,
+                              validator: (value) => value == null || value.isEmpty ? 'Selecciona una categoría' : null,
                               iconEnabledColor: Colors.white,
                               style: const TextStyle(color: Colors.white),
                             ),
@@ -351,24 +232,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                             children: [
                               const Text(
                                 'Imagen del producto',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 10),
                               _imagenSeleccionada != null
-                                  ? Image.file(
-                                      _imagenSeleccionada!,
-                                      height: 150,
-                                      width: 150,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : const Text(
-                                      'No hay imagen seleccionada',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
+                                  ? Image.file(_imagenSeleccionada!, height: 150, width: 150, fit: BoxFit.cover)
+                                  : const Text('No hay imagen seleccionada', style: TextStyle(color: Colors.white)),
                               const SizedBox(height: 10),
                               ElevatedButton(
                                 onPressed: seleccionarImagen,
@@ -387,11 +256,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                           SwitchListTile(
                             title: Text(
                               '¿Está en oferta?',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.lightBlue[600],
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.lightBlue[600]),
                             ),
                             value: _enOferta,
                             onChanged: (val) {
@@ -400,16 +265,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                               });
                             },
                             activeColor: const Color(0xff07CAB3),
-                            inactiveThumbColor: const Color.fromARGB(
-                              255,
-                              75,
-                              74,
-                              74,
-                            ),
+                            inactiveThumbColor: const Color.fromARGB(255, 75, 74, 74),
                             inactiveTrackColor: Colors.grey[300],
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                           ),
                         ],
                       ),
@@ -424,10 +282,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xff07CAB3),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 20,
-                  horizontal: 20,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -448,3 +303,28 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     );
   }
 }
+
+
+  Widget _customTextFormField({
+    required TextEditingController controller,
+    required String labelText,
+    required String? Function(String?) validator,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextFormField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white, fontSize: 20),
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: const TextStyle(fontSize: 20, color: Colors.white),
+        filled: true,
+        fillColor: const Color.fromARGB(255, 75, 74, 74),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+      ),
+      keyboardType: keyboardType,
+      validator: validator,
+    );
+  }
